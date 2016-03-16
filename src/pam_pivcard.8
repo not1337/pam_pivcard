@@ -1,0 +1,159 @@
+.TH "PAM_PIVCARD" "8" "04/01/2015" "" ""
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.nh
+.ad l
+.SH "NAME"
+pam_pivcard \- Module for PIV smartcard authentication
+.SH "SYNOPSIS"
+.HP \w'\fBpam_pivcard\&.so\fR\ 'u
+\fBpam_pivcard\&.so\fR [\&.\&.\&.]
+.SH "DESCRIPTION"
+.PP
+The \fBpam_pivcard\fR \s-1PAM\s0 module allows for system authentication using PIV and compatible smartcards (actually developed using a Yubikey). Additionally it can inject the user's plaintext password (stored encrypted on disk) for other \s-1PAM\s0 modules that require an actual authentication token. The latter requires a local (/etc/shadow) user account.
+.PP
+A helper binary, \fBpivhelper\fR, is provided which actually handles all smartcard processing. The helper is very simple and will proceed only if the effective user id is 0 (root). This way the calling process does not need to load the libraries required for smartcard authentication.
+.SH "OPTIONS"
+.PP
+\fBtry_first_pass\fR
+.RS 4
+Use password already entered as PIN, if specified, otherwise inquire PIN.
+.RE
+.PP
+\fBuse_first_pass\fR
+.RS 4
+Require an already entered password which is used as PIN.
+.RE
+.PP
+\fBopensc_config=\fR\fB\fIpath\fR\fR
+.RS 4
+The opensc configuration file to use, if not specified the global configuration file (typically /etc/opensc.conf) is used.
+.RE
+.PP
+\fBhelper=\fR\fB\fIpath\fR\fR
+.RS 4
+The helper utility that actually interworks with the smartcard by means of OpenSSL (engine), default is /usr/libexec/pivhelper.
+.RE
+.PP
+\fBengine=\fR\fB\fIpath\fR\fR
+.RS 4
+The OpenSSL engine library to use, default is either /usr/lib64/engines/engine_pkcs11.so or /usr/lib/engines/engine_pkcs11.so depending on whether the system is 64 bit or 32 bit.
+.RE
+.PP
+\fBpkcs11=\fR\fB\fIpath\fR\fR
+.RS 4
+The PKCS11 library to use, default is is either /usr/lib64/opensc-pkcs11.so or /usr/lib/opensc-pkcs11.so depending on whether the system is 64 bit or 32 bit.
+.RE
+.PP
+\fBuserfile=\fR\fB\fIpath\fR\fR
+.RS 4
+The optional configuration file specifying users, processing modes and certificates. The format of this file is /etc/passwd style and consists of:
+.TP
+\fR\fB\fI<user>:<mode>:<comment>:<certificate>\fR\fR
+.TP
+.RS -4
+\fR\fB\fI<user>\fR\fR is the same as in /etc/passwd.
+\fR\fB\fI<mode>\fR\fR is the processing mode, a number in the range of 0-3.
+\fR\fB\fI 0\fR\fR means that the public key stored on card is matched to the public key on disk and in case of a match challenge response authentication takes place.
+\fR\fB\fI 1\fR\fR is like 0 with the addition that an on disk encrypted password file is decrypted and, if decryption was successful, the plaintext password is injected as the authentication token onto the PAM stack.
+\fR\fB\fI 2\fR\fR means that the public key stored on card is matched to the public key on disk. In case of a match the disk encrypted password file is then decrypted and, if decryption was successful, the plaintext password is injected as the authentication token onto the PAM stack.
+\fR\fB\fI 3\fR\fR is like 2 but without any public key matching, thus the specified on disk certificate does not need to exist.
+\fR\fB\fI<certificate>\fR\fR is the pathname of the associated certificate which contains the public key related to the private key on the smartcard and \fR\fB\fI<comment>\fR\fR is an arbitary comment.
+.RS 4
+.RE
+.PP
+\fBpassfiledir=\fR\fB\fIpath\fR\fR
+.RS 4
+The directory the encrypted passwords are kept in, default is /etc/pam_pivcard/data.
+.RE
+.PP
+\fBkeyfile=\fR\fB\fIreader:slot\fR\fR
+.RS 4
+This specifies the key slot on the smartcard used for authentication. For a PIV smartcard the following slots are possible:
+.TP
+.RS -4
+\fR\fB\fI"01:01"\fR\fR key slot 9A (PIN required once), PIV Authentication
+\fR\fB\fI"01:02"\fR\fR key slot 9C (PIN always required), Digital Signature
+\fR\fB\fI"01:03"\fR\fR key slot 9D (PIN required once), for Key Management
+\fR\fB\fI"01:04"\fR\fR key slot 9E (PIN never required), Card Authentication
+The default is \fR\fB\fI"01:01"\fR\fR.
+.PP
+.RS 4
+Note that the first two digits before the colon specify the reader slot of the card reader to be used. You are advised to use a private opensc.conf file with proper ignored_readers and allowed_readers (requires supplied patch) options to always have your PIV card available in slot 1 if possible.
+.TP
+The options \fBkeyfile2\fR through \fBkeyfile9\fR with similar semantics but an empty default exist. You can use them if you have e.g. a NFC reader and when inserting your token directly into a USB port makes your token appear as "02:xx".
+.TP
+Use the following command (adapted to your system) to list the readers as found by the pivhelper:
+.TP
+.RS -4
+env OPENSC_CONF=<your opensc.conf> pkcs11-tool --module <path to opensc-pkcs11.so> --list-slots
+.RS 4
+.RE
+.PP
+\fBnopin\fR
+.RS 4
+Don't ask for a PIN, only usable with keyfile "xx:04" (requires supplied patch).
+.RE
+.PP
+\fBnodevok\fR
+.RS 4
+Don't treat missing authentication token as an error when changing your password.
+.RE
+.PP
+\fBdofail\fR
+.RS 4
+Return failure codes instead of ignore to the PAM stack when authenticating.
+.SH "MODULE TYPES PROVIDED"
+.PP
+All module types (\fBaccount\fR, \fBauth\fR, \fBpassword\fR and \fBsession\fR) are provided, though \fBaccount\fR and \fBsession\fR currently do nothing.
+.SH "RETURN VALUES"
+.RE
+.PP
+PAM_SERVICE_ERR
+.RS 4
+Configuration error.
+.RE
+.PP
+PAM_SUCCESS
+.RS 4
+Successful challenge response authentification (only if configuration file is used and only in mode 0 which is challenge response only), or password change possible or complete.
+.RE
+.PP
+PAM_IGNORE
+.RS 4
+All other authentication cases if "dofail" is not specified or, if "dofail" is specified, in case of successful injection of the plaintext password onto the PAM stack.
+.RE
+.PP
+PAM_AUTH_ERR
+.RS 4
+Authentication failure (e.g. missing or illegal PIN or unsuccessful card authentification or password file pathname length exceeded).
+.RE
+.PP
+PAM_AUTHINFO_UNAVAIL
+.RS 4
+Problem starting the helper or a helper communication problem or e.g. an unacceptable user name.
+.RE
+.PP
+PAM_PERM_DENIED
+.RS 4
+Password change not possible due to missing smartcard.
+.RE
+.PP
+PAM_CRED_INSUFFICIENT
+.RS 4
+Missing or illegal smartcard PIN.
+.RE
+.PP
+PAM_BUF_ERR
+.RS 4
+Out of memory.
+.RE
+.SH "SEE ALSO"
+.PP
+\fBopenssl\fR(1),
+\fBopensc-tool\fR(1),
+\fBpam.d\fR(5),
+\fBpam\fR(8)
+.SH "AUTHOR"
+.PP
+pam_pivcard was written by Andreas Steinmetz.

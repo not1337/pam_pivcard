@@ -1,0 +1,52 @@
+.TH PIVCLIENT "1" "April 2015" "" ""
+.SH NAME
+pivclient \- non PAM authentication access to the PIV daemon
+.SH SYNOPSIS
+.B pivclient
+[\fIOPTION\fR]...
+.SH DESCRIPTION
+.PP
+pivclient is a non PAM authentication access utility to the PIV daemon. It will probably not work right out of the box as it typically will require access to the pivd unix domain socket or a virtual serial device as well as the RSA public key. You will have to adapt permissions properly and make pivclient suid/sgid as required for your system.
+.SH COMMON OPTIONS
+.TP
+\fB\-u\fR \fB\fIname\fR\fR
+The authentication name, i.e. the user name to be authenticated. There is no default. This option is mandatory.
+.TP
+\fB\-p\fR \fB\fIpin\fR\fR
+The smartcard PIN or - to read the PIN from standard input. There is no default. This option is optional.
+.TP
+\fB\-k\fR \fB\fIpathname\fR\fR
+The required pathname of a 2048 bit RSA public key file. The default is /etc/pam_pivcard/piv.pub. The key should be accessible only by root.
+.TP
+\fB\-h\fR
+Show help.
+.SH UNIX DOMAIN SOCKET OPTIONS
+.TP
+\fB\-s\fR \fB\fIpathname\fR\fR
+The pathname of the pivd listening unix domain socket, default is /var/run/pivd.sock.
+.SH SERIAL LINE OPTIONS
+.TP
+\fB-D\fR \fB\fIpathname\fR\fR
+The pathname of the virtual serial device to be used for communication with the host pivd.
+.TP
+\fB-L\fR \fB\fIpathname\fR\fR
+The pathname of the lock file for the virtual serial device, typically something like /var/lock/<lockfile>. This lock file is neccessary to synchronize access to the virtual serial device.
+.SH TCP OPTIONS
+.TP
+\fB-H\fR \fB\fIhostaddress\fR\fR
+The address (hostname or ip) of the remote host running pivd.
+.TP
+\fB-P\fR \fB\fInumber\fR\fR
+The port number (1-65535) the remote pivd is listening on.
+.TP
+\fB-i\fR \fB\fIdevice\fR\fR
+The network interface to be used in case an IPv6 link local address is specified. For all other address types this option must not be specified.
+.SH RETURN VALUES
+pivclient will return 0 in case of successful authentication and 1 in every other case.
+.SH AUTHOR
+Written by Andreas Steinmetz
+.SH COPYRIGHT
+Copyright \(co 2015 Andreas Steinmetz
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

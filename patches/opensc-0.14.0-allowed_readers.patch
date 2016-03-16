@@ -1,0 +1,21 @@
+--- src/pkcs11/slot.c.orig	2015-03-21 11:16:07.062353222 +0100
++++ src/pkcs11/slot.c	2015-03-21 11:33:03.930962813 +0100
+@@ -120,6 +120,18 @@ CK_RV initialize_reader(sc_reader_t *rea
+ 			}
+ 			list = list->next;
+ 		}
++		list = scconf_find_list(conf_block, "allowed_readers");
++		if (list != NULL) {
++			while (list != NULL) {
++				if (strstr(reader->name, list->data) != NULL)
++					break;
++				list = list->next;
++			}
++			if (list == NULL) {
++				sc_log(context, "Ignoring reader \'%s\' because not in 'allowed_readers'\n", reader->name);
++				return CKR_OK;
++			}
++		}
+ 	}
+ 
+ 	for (i = 0; i < sc_pkcs11_conf.slots_per_card; i++) {

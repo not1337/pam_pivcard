@@ -1,0 +1,18 @@
+DFTHELPER=/usr/libexec/pivforwarder
+
+all: pam_pivrmt.so pam_pivnet.so pivforwarder pivclient
+
+pam_pivrmt.so: pam_pivrmt.c common.h
+	gcc -Wall -O3 -fPIC -D'DFTHELPER="$(DFTHELPER)"' -shared -rdynamic -Wl,-x -Wl,-S -o $@ $< -lpam
+
+pam_pivnet.so: pam_pivnet.c common.h
+	gcc -Wall -O3 -fPIC -D'DFTHELPER="$(DFTHELPER)"' -shared -rdynamic -Wl,-x -Wl,-S -o $@ $< -lpam
+
+pivforwarder: pivforwarder.c common.h
+	gcc -Wall -O3 -s -o $@ $< -lcrypto
+
+pivclient: pivclient.c common.h
+	gcc -Wall -O3 -s -o $@ $< -lcrypto
+
+clean:
+	rm -f pam_pivrmt.so pam_pivnet.so pivforwarder pivclient

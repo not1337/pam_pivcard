@@ -1,0 +1,66 @@
+.TH TOTPD "1" "April 2015" "" ""
+.SH NAME
+pivd \- a daemon providing PIV smartcard challenge response authentification for virtual guests.
+.SH SYNOPSIS
+.B pivd
+[\fIOPTION\fR]...
+.SH DESCRIPTION
+.PP
+pivd is a daemon providing PIV smartcard challenge response authentification for virtual guests. It provides a unix domain socket for access. Optionally an additional TCP listening port may be specified. This port is supposed to be used for host only networking to allow virtual guests access. Make sure that you properly firewall the PIV daemon port if you enable networking.
+.PP
+The helper binary, \fBpivhelper\fR, which is provided for pam_pivcard.so is also used by pivd. This helper actually handles all smartcard processing. The helper is very simple and will proceed only if the effective user id is 0 (root).
+.TP
+\fB\-k\fR \fB\fIpathname\fR\fR
+The required pathname of a 2048 bit RSA private key file. The default is /etc/pam_pivcard/pivd.key. The key should be accessible only by root.
+.TP
+\fB\-p\fR \fB\fIpathname\fR\fR
+The pid file of the daemon, default is /var/run/pivd.pid.
+.TP
+\fB\-s\fR \fB\fIpathname\fR\fR
+The unix domain socket pathname of the daemon, default is /var/run/pivd.sock.
+.TP
+\fB\-1\fR \fB\fIkeyslot\fR\fR to \fB\-9\fR \fB\fIkeyslot\fR\fR
+The keyslot (01-04) for the given reader (1-9).
+.TP
+\fB\-H\fR \fB\fIpathname\fR\fR
+The helper utility that actually interworks with the smartcard by means of OpenSSL (engine), default is /usr/libexec/pivhelper.
+.TP
+\fB\-c\fR \fB\fIpathname\fR\fR
+The mandatory configuration file specifying users, processing modes and certificates. The format of this file is /etc/passwd style and consists of:
+.TP
+.RE
+\fR\fB\fI<user>:<mode>:<comment>:<certificate>\fR\fR
+.TP
+.RE
+\fR\fB\fI<user>\fR\fR is the same as in /etc/passwd. \fR\fB\fI<mode>\fR\fR is the processing mode, a number in the range of 0-3. Only entries with mode 0 are accepted for pivd. 0 means that the public key stored on card is matched to the public key on disk and in case of a match challenge response authentication takes place. \fR\fB\fI<certificate>\fR\fR is the pathname of the associated certificate which contains the public key related to the private key on the smartcard and \fR\fB\fI<comment>\fR\fR is an arbitary comment.
+.TP
+\fB\-E\fR \fB\fIpathname\fR\fR
+The OpenSSL engine library to use, default is either /usr/lib64/engines/engine_pkcs11.so or /usr/lib/engines/engine_pkcs11.so depending on whether the system is 64 bit or 32 bit.
+.TP
+\fB\-P\fR \fB\fIpathname\fR\fR
+The PKCS11 library to use, default is is either /usr/lib64/opensc-pkcs11.so or /usr/lib/opensc-pkcs11.so depending on whether the system is 64 bit or 32 bit.
+.TP
+\fB\-o\fR \fB\fIpathname\fR\fR
+The opensc configuration file to use, if not specified the global configuration file (typically /etc/opensc.conf) is used.
+.TP
+\fB\-L\fR \fB\fInumber\fR\fR
+The TCP listening port number in the range of 1 to 65535, if not specified which is the default TCP listening is disabled.
+.TP
+\fB\-X\fR \fB\fIprefix\fR\fR
+An optional prefix which is prepended to the user name delivered by the requesting client. This option can be used to distinguish between users of the virtual guest systems and users of the host system.
+.TP
+\fB\-N\fR
+Disallow PINs, i.e. accept only client authentication requests that do not contain PINs. This can help to prevent damage (PIN count of smartcard going to 0) in case of probably malicious virtual guests. Use of this option allows to use the PIV slot 04 (9E) which doesn't require any PIN. Note that you will need to patch engine_pkcs11 to be able to use this feature (patch provided).
+.TP
+\fB\-f\fR
+Do not daemonize and stay in foreground.
+.TP
+\fB\-h\fR
+Show help.
+.SH AUTHOR
+Written by Andreas Steinmetz
+.SH COPYRIGHT
+Copyright \(co 2015 Andreas Steinmetz
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

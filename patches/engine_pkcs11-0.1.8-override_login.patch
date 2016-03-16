@@ -1,0 +1,80 @@
+diff -rNu engine_pkcs11-0.1.8.orig/src/engine_pkcs11.c engine_pkcs11-0.1.8/src/engine_pkcs11.c
+--- engine_pkcs11-0.1.8.orig/src/engine_pkcs11.c	2010-01-07 11:09:57.000000000 +0100
++++ engine_pkcs11-0.1.8/src/engine_pkcs11.c	2015-03-25 00:31:47.193119859 +0100
+@@ -56,6 +56,8 @@
+ 
+ static int verbose = 0;
+ 
++static int nologin = 0;
++
+ static char *module = NULL;
+ 
+ static char *init_args = NULL;
+@@ -96,6 +98,15 @@
+ 	return (pin != NULL);
+ }
+ 
++int set_nologin(const char *mode)
++{
++	if (mode != NULL && strcmp(mode,"1") == 0)
++		nologin=1;
++	else
++		nologin=0;
++	return 1;
++}
++
+ int inc_verbose(void)
+ {
+ 	verbose++;
+@@ -683,7 +694,7 @@
+ 	}
+ 
+ 	/* Perform login to the token if required */
+-	if (tok->loginRequired) {
++	if (nologin == 0 && tok->loginRequired) {
+ 		/* If the token has a secure login (i.e., an external keypad),
+ 		   then use a NULL pin. Otherwise, check if a PIN exists. If
+ 		   not, allocate and obtain a new PIN. */
+diff -rNu engine_pkcs11-0.1.8.orig/src/engine_pkcs11.h engine_pkcs11-0.1.8/src/engine_pkcs11.h
+--- engine_pkcs11-0.1.8.orig/src/engine_pkcs11.h	2010-01-07 11:09:57.000000000 +0100
++++ engine_pkcs11-0.1.8/src/engine_pkcs11.h	2015-03-25 00:28:43.081271452 +0100
+@@ -43,6 +43,8 @@
+ 
+ int inc_verbose(void);
+ 
++int set_nologin(const char *mode);
++
+ int pkcs11_finish(ENGINE * engine);
+ 
+ int pkcs11_init(ENGINE * engine);
+diff -rNu engine_pkcs11-0.1.8.orig/src/hw_pkcs11.c engine_pkcs11-0.1.8/src/hw_pkcs11.c
+--- engine_pkcs11-0.1.8.orig/src/hw_pkcs11.c	2008-07-31 13:59:05.000000000 +0200
++++ engine_pkcs11-0.1.8/src/hw_pkcs11.c	2015-03-25 00:27:55.329051368 +0100
+@@ -82,6 +82,7 @@
+ #define CMD_QUIET		(ENGINE_CMD_BASE+4)
+ #define CMD_LOAD_CERT_CTRL	(ENGINE_CMD_BASE+5)
+ #define CMD_INIT_ARGS	(ENGINE_CMD_BASE+6)
++#define CMD_NOLOGIN	(ENGINE_CMD_BASE+7)
+ 
+ static int pkcs11_engine_destroy(ENGINE * e);
+ static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
+@@ -120,6 +121,10 @@
+ 	 "INIT_ARGS",
+ 	 "Specifies additional initialization arguments to the pkcs11 module",
+ 	 ENGINE_CMD_FLAG_STRING},
++	{CMD_NOLOGIN,
++	 "NOLOGIN",
++	 "Do never login to card if set to 1",
++	 ENGINE_CMD_FLAG_STRING},
+ 	{0, NULL, NULL, 0}
+ };
+ 
+@@ -144,6 +149,8 @@
+ 		return load_cert_ctrl(e, p);
+ 	case CMD_INIT_ARGS:
+ 		return set_init_args((const char *)p);
++	case CMD_NOLOGIN:
++		return set_nologin((const char *)p);
+ 	default:
+ 		break;
+ 	}

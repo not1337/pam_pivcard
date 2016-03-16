@@ -1,0 +1,102 @@
+.TH "PAM_PIVNET" "8" "04/01/2015" "" ""
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.nh
+.ad l
+.SH "NAME"
+pam_pivnet \- Module for PIV smartcard authentication for guests
+.SH "SYNOPSIS"
+.HP \w'\fBpam_pivnet\&.so\fR\ 'u
+\fBpam_pivnet\&.so\fR [\&.\&.\&.]
+.SH "DESCRIPTION"
+.PP
+The \fBpam_pivnet\fR \s-1PAM\s0 module allows for virtual guest system authentication using PIV and compatible smartcards (actually developed using a Yubikey). This module connects to the host totpd using a TCP network connection. This network connection is not supposed to be done over any unprotected network but is supposed to be used with host only networks.
+.PP
+A helper binary, \fBpivforwarder\fR, is provided which actually handles the communication with the host pivd. The helper is very simple and will proceed only if the effective user id is 0 (root).
+.SH "OPTIONS"
+.PP
+\fBtry_first_pass\fR
+.RS 4
+Use password already entered as PIN, if specified, otherwise inquire PIN.
+.RE
+.PP
+\fBuse_first_pass\fR
+.RS 4
+Require an already entered password which is used as PIN.
+.RE
+.PP
+\fBnopin\fR
+.RS 4
+Don't ask for a PIN, only usable with PIV card slot 9E (requires supplied patch).
+.RE
+.PP
+\fBkey=\fR\fB\fIpath\fR\fR
+.RS 4
+The required pathname of a 2048 bit RSA public key file. The default is /etc/pam_pivcard/piv.pub. The key should be accessible only by root.
+.RE
+.PP
+\fBhelper=\fR\fB\fIpath\fR\fR
+.RS 4
+The helper utility that actually interworks with the host pivd by means of OpenSSL, default is /usr/libexec/pivforwarder.
+.RE
+.PP
+\fBdofail\fR
+.RS 4
+Return failure codes instead of ignore to the PAM stack when authenticating.
+.PP
+\fBhost=\fR\fB\fIhostaddress\fR\fR
+.RS 4
+The address (hostname or ip) of the remote host running totpd.
+.RE
+.PP
+\fBport=\fR\fB\fInumber\fR\fR
+.RS 4
+The port number (1-65535) the remote totpd is listening on.
+.RE
+.PP
+\fBinterface=\fR\fB\fIdevice\fR\fR
+.RS 4
+The network interface to be used in case an IPv6 link local address is specified. For all other address types this option must not be specified.
+.SH "MODULE TYPES PROVIDED"
+.PP
+All module types (\fBaccount\fR, \fBauth\fR, \fBpassword\fR and \fBsession\fR) are provided, though \fBaccount\fR and \fBsession\fR currently do nothing whereas \fBpassword\fR will always deny (token change is not possible this way).
+.SH "RETURN VALUES"
+.RE
+.PP
+PAM_SERVICE_ERR
+.RS 4
+Configuration error.
+.RE
+.PP
+PAM_SUCCESS
+.RS 4
+Successful challenge response authentification.
+.RE
+.PP
+PAM_IGNORE
+.RS 4
+All other authentication cases if "dofail" is not specified.
+.RE
+.PP
+PAM_AUTH_ERR
+.RS 4
+Authentication failure.
+.RE
+.PP
+PAM_AUTHINFO_UNAVAIL
+.RS 4
+Problem starting the helper or a helper communication problem.
+.RE
+.PP
+PAM_PERM_DENIED
+.RS 4
+Password change not possible. You can't change a smartcard private key this way.
+.RE
+.SH "SEE ALSO"
+.PP
+\fBopenssl\fR(1),
+\fBpam.d\fR(5),
+\fBpam\fR(8)
+.SH "AUTHOR"
+.PP
+pam_pivnet was written by Andreas Steinmetz.
