@@ -188,7 +188,7 @@ openssl x509 -in <certificate> -pubkey -noout | \
 
 Using only private key encrypt on the PIV smartcard allows for the use of
 slot 9E which is not PIN protected and which is available via NFC
-(needs engine_pkcs11-0.1.8-override_login.patch to be applied).
+(needs engine_pkcs11-x.y.z-override_login.patch to be applied).
 
 If you chose to use a Yubikey NEO as your smartcard you can use the
 pivscript.sh provided in the yubikey directory for easier Yubikey
