@@ -1,0 +1,89 @@
+diff -rNu engine_pkcs11-0.2.2.orig/src/engine_pkcs11.c engine_pkcs11-0.2.2/src/engine_pkcs11.c
+--- engine_pkcs11-0.2.2.orig/src/engine_pkcs11.c	2016-03-28 17:07:23.000000000 +0200
++++ engine_pkcs11-0.2.2/src/engine_pkcs11.c	2016-10-31 15:17:11.097363952 +0100
+@@ -53,6 +53,8 @@
+ 
+ static int verbose = 0;
+ 
++static int nologin = 0;
++
+ static char *module = NULL;
+ 
+ static char *init_args = NULL;
+@@ -106,6 +108,15 @@
+ 	return (pin != NULL);
+ }
+ 
++int set_nologin(const char *mode)
++{
++	if (mode != NULL && strcmp(mode,"1") == 0)
++		nologin=1;
++	else
++		nologin=0;
++	return 1;
++}
++
+ int inc_verbose(void)
+ {
+ 	verbose++;
+@@ -684,7 +695,7 @@
+ 	}
+ 
+ 	/* In several tokens certificates are marked as private. We use the pin-value */
+-	if (tok->loginRequired && pin) {
++	if (nologin == 0 && tok->loginRequired && pin) {
+ 		/* Now login in with the (possibly NULL) pin */
+ 		if (PKCS11_login(slot, 0, pin)) {
+ 			/* Login failed, so free the PIN if present */
+@@ -1010,7 +1021,7 @@
+ 
+ 	if (isPrivate) {
+ 		/* Perform login to the token if required */
+-		if (!pkcs11_login(slot, tok, ui_method, callback_data)) {
++		if (nologin == 0 && !pkcs11_login(slot, tok, ui_method, callback_data)) {
+ 			fprintf(stderr, "login to token failed, returning NULL...\n");
+ 			return NULL;
+ 		}
+diff -rNu engine_pkcs11-0.2.2.orig/src/engine_pkcs11.h engine_pkcs11-0.2.2/src/engine_pkcs11.h
+--- engine_pkcs11-0.2.2.orig/src/engine_pkcs11.h	2016-01-26 20:53:08.000000000 +0100
++++ engine_pkcs11-0.2.2/src/engine_pkcs11.h	2016-10-31 14:14:33.970999828 +0100
+@@ -47,6 +47,8 @@
+ 
+ int inc_verbose(void);
+ 
++int set_nologin(const char *mode);
++
+ int pkcs11_finish(ENGINE * engine);
+ 
+ int pkcs11_init(ENGINE * engine);
+diff -rNu engine_pkcs11-0.2.2.orig/src/hw_pkcs11.c engine_pkcs11-0.2.2/src/hw_pkcs11.c
+--- engine_pkcs11-0.2.2.orig/src/hw_pkcs11.c	2016-03-28 17:07:23.000000000 +0200
++++ engine_pkcs11-0.2.2/src/hw_pkcs11.c	2016-10-31 14:17:05.897930851 +0100
+@@ -83,6 +83,7 @@
+ #define CMD_QUIET		(ENGINE_CMD_BASE+4)
+ #define CMD_LOAD_CERT_CTRL	(ENGINE_CMD_BASE+5)
+ #define CMD_INIT_ARGS	(ENGINE_CMD_BASE+6)
++#define CMD_NOLOGIN	(ENGINE_CMD_BASE+7)
+ 
+ static int pkcs11_engine_destroy(ENGINE * e);
+ static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
+@@ -121,6 +122,10 @@
+ 		"INIT_ARGS",
+ 		"Specifies additional initialization arguments to the pkcs11 module",
+ 		ENGINE_CMD_FLAG_STRING},
++	{CMD_NOLOGIN,
++		"NOLOGIN",
++		"Do never login to card if set to 1",
++		ENGINE_CMD_FLAG_STRING},
+ 	{0, NULL, NULL, 0}
+ };
+ 
+@@ -148,6 +153,8 @@
+ 		return load_cert_ctrl(e, p);
+ 	case CMD_INIT_ARGS:
+ 		return set_init_args((const char *)p);
++	case CMD_NOLOGIN:
++		return set_nologin((const char *)p);
+ 	default:
+ 		break;
+ 	}
