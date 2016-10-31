@@ -37,7 +37,7 @@ The helper utility that actually interworks with the smartcard by means of OpenS
 .PP
 \fBengine=\fR\fB\fIpath\fR\fR
 .RS 4
-The OpenSSL engine library to use, default is either /usr/lib64/engines/engine_pkcs11.so or /usr/lib/engines/engine_pkcs11.so depending on whether the system is 64 bit or 32 bit.
+The OpenSSL engine library to use, default is either /usr/lib64/engines/engine_pkcs11.so or /usr/lib/engines/engine_pkcs11.so depending on whether the system is 64 bit or 32 bit. Starting with engine_pkcs11-0.2.2 this seems to be changed to /usr/lib64/libpkcs11.so or /usr/lib/libpkcs11.so, respectively.
 .RE
 .PP
 \fBpkcs11=\fR\fB\fIpath\fR\fR
