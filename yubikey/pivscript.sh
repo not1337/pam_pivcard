@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# (C) 2015 Andreas Steinmetz, ast@domdv.de
+# (C) 2015,2016 Andreas Steinmetz, ast@domdv.de
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -50,7 +50,7 @@ else
 fi
 if [ "$MGMTKEY" != "" ]
 then
-	mgmt="-k $MGMTKEY"
+	mgmt="--key=$MGMTKEY"
 else
 	mgmt=""
 fi
@@ -76,7 +76,7 @@ else
 fi
 if [ "$MGMTKEY" != "" ]
 then
-	mgmt="-k $MGMTKEY"
+	mgmt="--key=$MGMTKEY"
 else
 	mgmt=""
 fi
@@ -96,7 +96,7 @@ else
 fi
 if [ "$MGMTKEY" != "" ]
 then
-	mgmt="-k $MGMTKEY"
+	mgmt="--key=$MGMTKEY"
 else
 	mgmt=""
 fi
@@ -203,7 +203,7 @@ then
 	echo "need new management key to continue"
 	return 1
 fi
-yubico-piv-tool -k 010203040506070801020304050607080102030405060708 -n $MGMTKEY -a set-mgm-key "$opt$dev" || return 1
+yubico-piv-tool --key=010203040506070801020304050607080102030405060708 -n $MGMTKEY -a set-mgm-key "$opt$dev" || return 1
 return 0
 }
 
@@ -222,7 +222,7 @@ then
 	echo "need current management key to continue"
 	return 1
 fi
-yubico-piv-tool -k $MGMTKEY -n 010203040506070801020304050607080102030405060708 -a set-mgm-key "$opt$dev" || return 1
+yubico-piv-tool --key=$MGMTKEY -n 010203040506070801020304050607080102030405060708 -a set-mgm-key "$opt$dev" || return 1
 return 0
 }
 
