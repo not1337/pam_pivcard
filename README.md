@@ -208,3 +208,9 @@ Compiling for virtual guests:
 The "src" directory includes a simple "Makefile.guest" which builds the stuff
 suitable for virtual guests. No install included, this must then be done
 manually.
+
+Readers (NFC):
+==============
+
+Tested with Gemalto Prox-DU (IDBridge CL3000) and ACS ACR1281U-C1.
+
