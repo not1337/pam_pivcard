@@ -44,8 +44,9 @@ If you do not use "dofail" authentication will return PAM_IGNORE in
 case of any authentication failure. This allows you to have e.g.
 pam_unix save your day as you can enter your password manually then.
 
-Be aware that for KDE you will need to modify /etc/pam.d/kde and to have
-the KDE screensaver work properly in the unlock case you will have to
+Be aware that for KDE you will need to modify /etc/pam.d/kde
+(additionally /etc/pam.d/sddm for KDE5) and to have the KDE
+screensaver work properly in the unlock case you will have to
 modify kcheckpass to be setuid root. You must not, never ever, set
 the pivhelper setuid root as the helper returns unencrypted passwords
 for injection onto the PAM stack. If you do not follow this advice
@@ -172,7 +173,7 @@ private key encrypt of a SHA256 hash. This hash is derived from the
 password field of /etc/shadow.
 
 Challenge response is based on a 32 byte random number from /dev/urandom
-which is hased using SHA256 and then the hash is encrypted by the smartcard
+which is hashed using SHA256 and then the hash is encrypted by the smartcard
 doing a private key encrypt. The encrypted result is the decrypted using the
 on disk certificate containing the public key and the hash is then verified
 against the original challenge.
