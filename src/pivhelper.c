@@ -281,6 +281,18 @@ err2:	BIO_free(cert);
 err1:	return r;
 }
 
+static int hascard(void *ctx,char *file)
+{
+	int r=NOCARD;
+	ENGINE *e=(ENGINE *)ctx;
+	EVP_PKEY *key;
+
+	if(!(key=ENGINE_load_public_key(e,file,NULL,NULL)))goto err1;
+	EVP_PKEY_free(key);
+	r=OK;
+
+err1:	return r;
+}
 static int cardfingerprint(void *ctx,char *file,void *out)
 {
 	int r=NOCARD;
@@ -431,8 +443,13 @@ static int validate(void *ctx,char *user,char *cfgfile,char *cardfile,int pre,
 			break;
 		case 3:	if(chresp)continue;
 			fclose(fp);
-			if(pre)if((r=cardfingerprint(ctx,cardfile,NULL)))
-				return r;
+			if(pre)
+			{
+				if((r=cardfingerprint(ctx,cardfile,NULL)))
+					return r;
+			}
+			else if((r=hascard(ctx,cardfile)))return r;
+
 			goto out;
 		}
 
