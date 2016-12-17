@@ -287,11 +287,14 @@ static int hascard(void *ctx,char *file)
 	ENGINE *e=(ENGINE *)ctx;
 	EVP_PKEY *key;
 
+	resume_engine(e,engbits);
+
 	if(!(key=ENGINE_load_public_key(e,file,NULL,NULL)))goto err1;
 	EVP_PKEY_free(key);
 	r=OK;
 
-err1:	return r;
+err1:	suspend_engine(e,&engbits);
+	return r;
 }
 static int cardfingerprint(void *ctx,char *file,void *out)
 {
@@ -303,6 +306,8 @@ static int cardfingerprint(void *ctx,char *file,void *out)
 	ENGINE *e=(ENGINE *)ctx;
 	unsigned char bfr[2048];
 	unsigned char *p=bfr;
+
+	resume_engine(e,engbits);
 
 	if(!(key=ENGINE_load_public_key(e,file,NULL,NULL)))goto err1;
 
@@ -332,7 +337,8 @@ err3:	if(rsa)RSA_free(rsa);
 	if(ec)EC_KEY_free(ec);
 	memclear(bfr,0,sizeof(bfr));
 err2:	EVP_PKEY_free(key);
-err1:	return r;
+err1:	suspend_engine(e,&engbits);
+	return r;
 }
 
 static int encrypt(void *ctx,char *name,char *file,void *in,int ilen,void *out)
