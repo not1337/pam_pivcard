@@ -2,7 +2,7 @@
  *
  * The pam_pivcard license version 1.0 This file is part of pam_pivcard,
  * the PIV (compatible) smartcard authentication module.
- * (C) 2015 Andreas Steinmetz, ast@domdv.de
+ * (C) 2015, 2016 Andreas Steinmetz, ast@domdv.de
  *
  * pam_pivcard is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
