@@ -1,0 +1,70 @@
+diff -rNu libp11-0.4.4.orig/src/eng_back.c libp11-0.4.4/src/eng_back.c
+--- libp11-0.4.4.orig/src/eng_back.c	2017-01-18 19:52:25.000000000 +0100
++++ libp11-0.4.4/src/eng_back.c	2017-02-19 19:01:12.770331869 +0100
+@@ -45,6 +45,7 @@
+ 	char *pin;
+ 	int pin_length;
+ 	int verbose;
++	int nologin;
+ 	char *module;
+ 	char *init_args;
+ 
+@@ -139,7 +140,7 @@
+ {
+ 	int already_logged_in = 0;
+ 
+-	if (!tok->loginRequired)
++	if (ctx->nologin == 1 || !tok->loginRequired)
+ 		return 1;
+ 
+ 	/* Check if already logged in to avoid resetting state */
+@@ -902,6 +903,15 @@
+ 	return 1;
+ }
+ 
++static int ctx_ctrl_set_nologin(ENGINE_CTX *ctx, const char *mode)
++{
++	if (mode != NULL && strcmp(mode,"1") == 0)
++		ctx->nologin=1;
++	else
++		ctx->nologin=0;
++	return 1;
++}
++
+ int ctx_engine_ctrl(ENGINE_CTX *ctx, int cmd, long i, void *p, void (*f)())
+ {
+ 	(void)i; /* We don't currently take integer parameters */
+@@ -918,6 +928,8 @@
+ 		return ctx_ctrl_load_cert(ctx, p);
+ 	case CMD_INIT_ARGS:
+ 		return ctx_ctrl_set_init_args(ctx, (const char *)p);
++	case CMD_NOLOGIN:
++		return ctx_ctrl_set_nologin(ctx, (const char *)p);
+ 	default:
+ 		break;
+ 	}
+diff -rNu libp11-0.4.4.orig/src/eng_front.c libp11-0.4.4/src/eng_front.c
+--- libp11-0.4.4.orig/src/eng_front.c	2017-01-12 22:09:07.000000000 +0100
++++ libp11-0.4.4/src/eng_front.c	2017-02-19 18:51:04.213102393 +0100
+@@ -110,6 +110,10 @@
+ 		"INIT_ARGS",
+ 		"Specifies additional initialization arguments to the PKCS#11 module",
+ 		ENGINE_CMD_FLAG_STRING},
++	{CMD_NOLOGIN,
++		"NOLOGIN",
++		"Do never login to card if set to 1",
++		ENGINE_CMD_FLAG_STRING},
+ 	{0, NULL, NULL, 0}
+ };
+ 
+diff -rNu libp11-0.4.4.orig/src/engine.h libp11-0.4.4/src/engine.h
+--- libp11-0.4.4.orig/src/engine.h	2017-01-12 22:08:42.000000000 +0100
++++ libp11-0.4.4/src/engine.h	2017-02-19 18:49:42.588571461 +0100
+@@ -46,6 +46,7 @@
+ #define CMD_QUIET		(ENGINE_CMD_BASE+4)
+ #define CMD_LOAD_CERT_CTRL	(ENGINE_CMD_BASE+5)
+ #define CMD_INIT_ARGS	(ENGINE_CMD_BASE+6)
++#define CMD_NOLOGIN	(ENGINE_CMD_BASE+7)
+ 
+ typedef struct st_engine_ctx ENGINE_CTX; /* opaque */
+ 
