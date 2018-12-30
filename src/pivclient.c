@@ -60,7 +60,11 @@ static void *getkey(char *file)
 	if(!(bio=BIO_new(BIO_s_file())))goto err1;
 	if(BIO_read_filename(bio,file)<=0)goto err2;
 	if(!(key=PEM_read_bio_PUBKEY(bio,NULL,NULL,NULL)))goto err2;
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	if(!EVP_PKEY_get0_RSA(key))goto err3;
+#else
 	if(EVP_PKEY_type(key->type)!=EVP_PKEY_RSA)goto err3;
+#endif
 	rsa=EVP_PKEY_get1_RSA(key);
 err3:	EVP_PKEY_free(key);
 err2:   BIO_free(bio);
@@ -78,7 +82,17 @@ static int keysize(void *key)
 {
 	RSA *rsa=(RSA *)key;
 
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	const BIGNUM *n;
+
+	if(rsa)
+	{
+		RSA_get0_key(rsa,&n,NULL,NULL);
+		if(n)return RSA_size(rsa);
+	}
+#else
 	if(rsa)if(rsa->n)return RSA_size(rsa);
+#endif
 	return 0;
 }
 
@@ -114,6 +128,15 @@ static int rsadec(void *key,void *in,int ilen,void **out,int *olen)
 
 static void sha256(unsigned char *in,int ilen,unsigned char *out)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	EVP_MD_CTX *md;
+
+	md=EVP_MD_CTX_new();
+	EVP_DigestInit_ex(md,EVP_sha256(),NULL);
+	EVP_DigestUpdate(md,in,ilen);
+	EVP_DigestFinal_ex(md,out,NULL);
+	EVP_MD_CTX_free(md);
+#else
 	EVP_MD_CTX md;
 
 	EVP_MD_CTX_init(&md);
@@ -121,6 +144,7 @@ static void sha256(unsigned char *in,int ilen,unsigned char *out)
 	EVP_DigestUpdate(&md,in,ilen);
 	EVP_DigestFinal_ex(&md,out,NULL);
 	EVP_MD_CTX_cleanup(&md);
+#endif
 }
 
 static int authorize(int s,char *user,char *pin,char *pubkey)

@@ -131,6 +131,13 @@ static void suspend_engine(void *ctx,int *mem)
 		ENGINE_unregister_DSA(e);
 	}
 
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	if(ENGINE_get_default_EC())
+	{
+		*mem|=0x04;
+		ENGINE_unregister_EC(e);
+	}
+#else
 	if(ENGINE_get_default_ECDH())
 	{
 		*mem|=0x04;
@@ -142,6 +149,7 @@ static void suspend_engine(void *ctx,int *mem)
 		*mem|=0x08;
 		ENGINE_unregister_ECDSA(e);
 	}
+#endif
 
 	if(ENGINE_get_default_DH())
 	{
@@ -162,14 +170,27 @@ static void resume_engine(void *ctx,int mem)
 
 	if(mem&0x01)ENGINE_register_RSA(e);
 	if(mem&0x02)ENGINE_register_DSA(e);
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	if(mem&0x04)ENGINE_register_EC(e);
+#else
 	if(mem&0x04)ENGINE_register_ECDH(e);
 	if(mem&0x08)ENGINE_register_ECDSA(e);
+#endif
 	if(mem&0x10)ENGINE_register_DH(e);
 	if(mem&0x20)ENGINE_register_RAND(e);
 }
 
 static void sha256(unsigned char *in,int ilen,unsigned char *out)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	EVP_MD_CTX *md;
+
+	md=EVP_MD_CTX_new();
+	EVP_DigestInit_ex(md,EVP_sha256(),NULL);
+	EVP_DigestUpdate(md,in,ilen);
+	EVP_DigestFinal_ex(md,out,NULL);
+	EVP_MD_CTX_free(md);
+#else
 	EVP_MD_CTX md;
 
 	EVP_MD_CTX_init(&md);
@@ -177,6 +198,7 @@ static void sha256(unsigned char *in,int ilen,unsigned char *out)
 	EVP_DigestUpdate(&md,in,ilen);
 	EVP_DigestFinal_ex(&md,out,NULL);
 	EVP_MD_CTX_cleanup(&md);
+#endif
 }
 
 static int sign(void *ctx,char *file,void *in,int ilen,void *out,int *olen)
@@ -253,6 +275,21 @@ static int certfingerprint(char *file,void *out)
 	if(!(x509=PEM_read_bio_X509_AUX(cert,NULL,NULL,NULL)))goto err2;
 	if(!(key=X509_get_pubkey(x509)))goto err3;
 
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	if(EVP_PKEY_get0_RSA(key))
+	{
+		if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err4;
+		if((len=i2d_RSA_PUBKEY(rsa,NULL))>sizeof(bfr))goto err5;
+		if(i2d_RSA_PUBKEY(rsa,&p)!=len)goto err5;
+	}
+	else if(EVP_PKEY_get0_EC_KEY(key))
+	{
+		if(!(ec=EVP_PKEY_get1_EC_KEY(key)))goto err4;
+		if((len=i2d_EC_PUBKEY(ec,NULL))>sizeof(bfr))goto err5;
+		if(i2d_EC_PUBKEY(ec,&p)!=len)goto err5;
+	}
+	else goto err4;
+#else
 	switch(EVP_PKEY_type(key->type))
 	{
 	case EVP_PKEY_RSA:
@@ -269,6 +306,7 @@ static int certfingerprint(char *file,void *out)
 
 	default:goto err4;
 	}
+#endif
 
 	if(out)sha256(bfr,len,out);
 	r=OK;
@@ -313,6 +351,21 @@ static int cardfingerprint(void *ctx,char *file,void *out)
 
 	r=CRYPTOFAIL;
 
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	if(EVP_PKEY_get0_RSA(key))
+	{
+		if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err2;
+		if((len=i2d_RSA_PUBKEY(rsa,NULL))>sizeof(bfr))goto err3;
+		if(i2d_RSA_PUBKEY(rsa,&p)!=len)goto err3;
+	}
+	else if(EVP_PKEY_get0_EC_KEY(key))
+	{
+		if(!(ec=EVP_PKEY_get1_EC_KEY(key)))goto err2;
+		if((len=i2d_EC_PUBKEY(ec,NULL))>sizeof(bfr))goto err3;
+		if(i2d_EC_PUBKEY(ec,&p)!=len)goto err3;
+	}
+	else goto err2;
+#else
 	switch(EVP_PKEY_type(key->type))
 	{
 	case EVP_PKEY_RSA:
@@ -329,6 +382,7 @@ static int cardfingerprint(void *ctx,char *file,void *out)
 
 	default:goto err2;
 	}
+#endif
 
 	if(out)sha256(bfr,len,out);
 	r=OK;
@@ -347,7 +401,11 @@ static int encrypt(void *ctx,char *name,char *file,void *in,int ilen,void *out)
 	int rem;
 	int r=NOUSER;
 	struct spwd *sp;
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	EVP_CIPHER_CTX *etx;
+#else
 	EVP_CIPHER_CTX etx;
+#endif
 	unsigned char bfr[512];
 	unsigned char key[32];
 	unsigned char iv[32];
@@ -359,6 +417,18 @@ static int encrypt(void *ctx,char *name,char *file,void *in,int ilen,void *out)
 		goto err2;
 
 	r=CRYPTOFAIL;
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	etx=EVP_CIPHER_CTX_new();
+	EVP_BytesToKey(EVP_aes_256_cfb(),EVP_sha256(),NULL,bfr,len,1,key,iv);
+	EVP_EncryptInit_ex(etx,EVP_aes_256_cfb(),NULL,key,iv);
+	len=ilen;
+	if(!EVP_EncryptUpdate(etx,out,&len,in,ilen))goto err3;
+	rem=ilen-len;
+	if(!EVP_EncryptFinal_ex(etx,out+len,&rem))goto err3;
+	r=OK;
+
+err3:	EVP_CIPHER_CTX_free(etx);
+#else
 	EVP_CIPHER_CTX_init(&etx);
 	EVP_BytesToKey(EVP_aes_256_cfb(),EVP_sha256(),NULL,bfr,len,1,key,iv);
 	EVP_EncryptInit_ex(&etx,EVP_aes_256_cfb(),NULL,key,iv);
@@ -369,6 +439,7 @@ static int encrypt(void *ctx,char *name,char *file,void *in,int ilen,void *out)
 	r=OK;
 
 err3:	EVP_CIPHER_CTX_cleanup(&etx);
+#endif
 	memclear(key,0,sizeof(key));
 	memclear(iv,0,sizeof(iv));
 err2:	memclear(bfr,0,sizeof(bfr));
@@ -382,7 +453,11 @@ static int decrypt(void *ctx,char *name,char *file,void *in,int ilen,void *out)
 	int rem;
 	int r=NOUSER;
 	struct spwd *sp;
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	EVP_CIPHER_CTX *etx;
+#else
 	EVP_CIPHER_CTX etx;
+#endif
 	unsigned char bfr[512];
 	unsigned char key[32];
 	unsigned char iv[32];
@@ -394,6 +469,18 @@ static int decrypt(void *ctx,char *name,char *file,void *in,int ilen,void *out)
 		goto err2;
 
 	r=CRYPTOFAIL;
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	etx=EVP_CIPHER_CTX_new();
+	EVP_BytesToKey(EVP_aes_256_cfb(),EVP_sha256(),NULL,bfr,len,1,key,iv);
+	EVP_DecryptInit_ex(etx,EVP_aes_256_cfb(),NULL,key,iv);
+	len=ilen;
+	if(!EVP_DecryptUpdate(etx,out,&len,in,ilen))goto err3;
+	rem=ilen-len;
+	if(!EVP_DecryptFinal_ex(etx,out+len,&rem))goto err3;
+	r=OK;
+
+err3:	EVP_CIPHER_CTX_free(etx);
+#else
 	EVP_CIPHER_CTX_init(&etx);
 	EVP_BytesToKey(EVP_aes_256_cfb(),EVP_sha256(),NULL,bfr,len,1,key,iv);
 	EVP_DecryptInit_ex(&etx,EVP_aes_256_cfb(),NULL,key,iv);
@@ -404,6 +491,7 @@ static int decrypt(void *ctx,char *name,char *file,void *in,int ilen,void *out)
 	r=OK;
 
 err3:	EVP_CIPHER_CTX_cleanup(&etx);
+#endif
 	memclear(key,0,sizeof(key));
 	memclear(iv,0,sizeof(iv));
 err2:	memclear(bfr,0,sizeof(bfr));
